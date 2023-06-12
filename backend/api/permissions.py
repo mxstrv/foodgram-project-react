@@ -6,4 +6,18 @@ class IsAuthenticatedOrReadOnlyForProfile(permissions.BasePermission):
         return request.user.is_authenticated or request.method in permissions.SAFE_METHODS
 
     def has_object_permission(self, request, view, obj):
-        return request.user.is_authenticated
+        return request.user.is_authenticated and request.user == obj.user
+
+
+class AdminUserOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated or request.method in permissions.SAFE_METHODS
+
+    def has_object_permission(self, request, view, obj):
+        return (
+                request.method in permissions.SAFE_METHODS
+                or request.user.is_authenticated
+                and request.user.is_active
+                and request.user == obj.author
+                or request.user.is_staff
+        )
