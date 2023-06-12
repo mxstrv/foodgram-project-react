@@ -21,7 +21,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_simplejwt',
+    'djoser',
+    'rest_framework.authtoken',
     'users.apps.UsersConfig',
     'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
@@ -119,23 +120,26 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 5,  # TODO CHECK PAGINATION REQUIREMENT
 }
-# Эмуляция почтового сервера
-# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-# EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
-# # Доменное имя для сообщения о регистрации
-# DOMAIN_NAME = 'registration@foodgram.com'
 
-# Работа токенов
-# Срок годности токена установлен на неделю
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
-    "AUTH_HEADER_TYPES": ("token",),
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'HIDE_USERS': False,
+    'PERMISSIONS': {
+        'user': ('api.permissions.AdminUserOrReadOnly',),
+        'user_list': ('api.permissions.AdminUserOrReadOnly',),
+    },
+    'SERIALIZERS': {
+        'user': 'api.serializers.UserSerializer',
+        'user_list': 'api.serializers.UserSerializer',
+        'current_user': 'api.serializers.UserSerializer',
+        'user_create': 'api.serializers.UserSerializer',
+    },
 }
