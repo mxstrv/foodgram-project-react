@@ -68,13 +68,15 @@ class TagSerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = ['id',
-                  'name',
-                  'measurement_unit',
-                  ]
+        fields = [
+            'id',
+            'name',
+            'measurement_unit',
+        ]
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
+    """ Сериализатор для ингредиентов в рецепте. """
     id = serializers.ReadOnlyField(
         source='ingredient.id')
     name = serializers.ReadOnlyField(
@@ -84,7 +86,12 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ['id', 'name', 'amount', 'measurement_unit']
+        fields = [
+            'id',
+            'name',
+            'amount',
+            'measurement_unit',
+        ]
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -125,7 +132,10 @@ class AddIngredientRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ('id', 'amount')
+        fields = [
+            'id',
+            'amount'
+        ]
 
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
@@ -179,6 +189,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         for tag in tags:
             RecipeTag.objects.create(recipe=recipe, tag=tag)
 
+    @atomic
     def create(self, validated_data):
         """
         POST запрос к рецепту.
@@ -191,8 +202,26 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         self.create_tags(tags, recipe)
         return recipe
 
-    # Без реализации этого метода вылезает AttributeError
-    # при POST запросе к рецепту
+    @atomic
+    def update(self, instance, validated_data):
+        """
+        PATCH запрос к рецепту.
+        """
+        RecipeIngredient.objects.filter(recipe=instance).delete()
+        ingredients = validated_data.pop('ingredients')
+        self.create_ingredients(ingredients, instance)
+        RecipeTag.objects.filter(recipe=instance).delete()
+        tags = validated_data.pop('tags')
+        self.create_tags(tags, instance)
+        instance.text = validated_data.pop('text')
+        instance.name = validated_data.pop('name')
+        if validated_data.get('image'):
+            instance.image = validated_data.pop('image')
+        instance.cooking_time = validated_data.pop('cooking_time')
+        instance.save()
+        return instance
+
+    # Без реализации этого метода при POST запросе вылезает AttributeError
     def to_representation(self, instance):
         return RecipeSerializer(instance, context={
             'request': self.context.get('request')
