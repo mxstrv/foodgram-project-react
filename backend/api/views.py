@@ -20,6 +20,7 @@ class CustomUserViewSet(UserViewSet):
     permission_classes = [IsAuthenticatedOrReadOnlyForProfile, ]
     serializer_class = UserSerializer
     pagination_class = PageNumberPagination
+    http_method_names = ['get', 'post']
 
     def get_object(self):
         # Для GET запроса по id пользователя
@@ -37,6 +38,7 @@ class TagViewSet(viewsets.ModelViewSet):
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
+    """ ViewSet для ингредиентов."""
     queryset = Ingredient.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly, ]
     http_method_names = ['get']
@@ -49,17 +51,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = [AuthorOrReadOnlyForRecipes, ]
     pagination_class = PageNumberPagination
-
-    # def perform_create(self, serializer):
-    #     serializer.save(author=self.request.user)
+    http_method_names = ['get', 'post', 'patch']
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return RecipeSerializer
         return CreateRecipeSerializer
-
-    # TODO WTF?
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({'request': self.request})
-        return context
