@@ -7,7 +7,9 @@ from djoser.views import UserViewSet
 from recipes.models import Tag, Recipe, Ingredient
 from users.models import CustomUser
 from .permissions import IsAuthenticatedOrReadOnlyForProfile, AuthorOrReadOnlyForRecipes
-from .serializers import UserSerializer, TagSerializer, RecipeSerializer, IngredientSerializer
+from .serializers import (UserSerializer, TagSerializer,
+                          RecipeSerializer,
+                          IngredientSerializer, CreateRecipeSerializer)
 
 
 # TODO Там, где надо, добавить поиск во вьюсеты
@@ -34,17 +36,30 @@ class TagViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
-    """ ViewSet для рецептов."""
-    queryset = Recipe.objects.all()
-    permission_classes = [AuthorOrReadOnlyForRecipes, ]
-    serializer_class = RecipeSerializer
-    pagination_class = PageNumberPagination
-
-
 class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly, ]
     http_method_names = ['get']
     serializer_class = IngredientSerializer
+    pagination_class = None
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    """ ViewSet для рецептов."""
+    queryset = Recipe.objects.all()
+    permission_classes = [AuthorOrReadOnlyForRecipes, ]
     pagination_class = PageNumberPagination
+
+    # def perform_create(self, serializer):
+    #     serializer.save(author=self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return RecipeSerializer
+        return CreateRecipeSerializer
+
+    # TODO WTF?
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context
