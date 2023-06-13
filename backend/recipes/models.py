@@ -1,5 +1,6 @@
 from django.core.validators import RegexValidator, MinValueValidator
 from django.db import models
+from django.db.models import UniqueConstraint
 
 from users.models import CustomUser
 
@@ -29,15 +30,32 @@ class Tag(models.Model):
             message='Неподходящее название'), ]
     )
 
+    class Meta:
+        verbose_name = 'Тэг'
+
+    def __str__(self):
+        return self.name
+
 
 class Ingredient(models.Model):
-    """ Модель для хранения ингредиентов для рецептов. """
+    """ Модель для ингредиента. """
     name = models.CharField(
         'Название ингредиента',
-        max_length=150  # TODO CHECK MAX LENGTH
+        max_length=150)
+    measurement_unit = models.CharField(
+        'Единица измерения ингредиента',
+        max_length=10
     )
-    measurement_unit = models.CharField('Единица измерения ингредиента',
-                                        max_length=10)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Ингредиент'
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='ingredient_name_unit_unique'
+            )
+        ]
 
 
 class Recipe(models.Model):
@@ -65,11 +83,19 @@ class Recipe(models.Model):
     )
     tags = models.ManyToManyField(
         Tag,
+        through='RecipeTag',
+        related_name='tags'
     )
     ingredients = models.ManyToManyField(
         Ingredient,
-        through='RecipeIngredient'
+        through='RecipeIngredient',
     )
+
+    class Meta:
+        verbose_name = 'Рецепт'
+
+    def __str__(self):
+        return self.name
 
 
 class RecipeIngredient(models.Model):
@@ -81,7 +107,36 @@ class RecipeIngredient(models.Model):
         Ingredient,
         on_delete=models.CASCADE,
     )
-    amount = models.IntegerField(
-        validators=[
-            MinValueValidator(1, message='not less than 1')]
+    amount = models.IntegerField()
+
+    class Meta:
+        verbose_name = 'Ингредиент в рецепте'
+        constraints = [
+            UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='recipe_ingredient_unique'
+            )
+        ]
+
+
+class RecipeTag(models.Model):
+    """ Модель связи тега и рецепта. """
+
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт'
     )
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.CASCADE,
+        verbose_name='Тег'
+    )
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['recipe', 'tag'],
+                name='recipe_tag_unique'
+            )
+        ]
