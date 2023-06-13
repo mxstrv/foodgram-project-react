@@ -1,16 +1,16 @@
-import base64
-
-from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from django.db.transaction import atomic
 from rest_framework import serializers
 
+from .fields import Base64ImageField
 from users.models import CustomUser
 from recipes.models import Tag, Recipe, RecipeIngredient, Ingredient, RecipeTag
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """ Сериализатор для работы с пользователем"""
+    """
+    Сериализатор для работы с пользователем.
+    """
     # TODO Добавить подписку на других пользователей
     first_name = serializers.CharField(max_length=150, required=True)
     last_name = serializers.CharField(max_length=150, required=True)
@@ -33,7 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        """ Создание нового пользователя."""
+        # Создание нового пользователя
         user = CustomUser(
             email=validated_data['email'],
             username=validated_data['username'],
@@ -45,20 +45,10 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class Base64ImageField(serializers.ImageField):
-    """ Сериализатор для работы с изображениями в Base64."""
-
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            file_formatting, image_b64 = data.split(';base64,')
-            ext = file_formatting.split('/')[-1]
-            data = ContentFile(base64.b64decode(image_b64), name='temp.' + ext)
-
-        return super().to_internal_value(data)
-
-
 class TagSerializer(serializers.ModelSerializer):
-    """ Сериализатор для тэгов."""
+    """
+    Сериализатор для тэгов.
+    """
 
     class Meta:
         model = Tag
@@ -76,7 +66,9 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    """ Сериализатор для ингредиентов в рецепте. """
+    """
+    Сериализатор для ингредиентов в рецепте.
+    """
     id = serializers.ReadOnlyField(
         source='ingredient.id')
     name = serializers.ReadOnlyField(
@@ -101,7 +93,6 @@ class RecipeSerializer(serializers.ModelSerializer):
     """
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
-
     image = Base64ImageField(required=True, allow_null=False)
     ingredients = serializers.SerializerMethodField()
 
@@ -142,12 +133,11 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     """
     Сериализатор, обрабатывающий POST/PATCH запросы к рецептам.
     """
-
     author = UserSerializer(read_only=True)
     ingredients = AddIngredientRecipeSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True)
-    image = Base64ImageField()
+    image = Base64ImageField(required=True)
 
     class Meta:
         model = Recipe
@@ -191,9 +181,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     @atomic
     def create(self, validated_data):
-        """
-        POST запрос к рецепту.
-        """
+        # POST запрос к рецепту
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
         author = self.context.get('request').user
@@ -204,9 +192,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     @atomic
     def update(self, instance, validated_data):
-        """
-        PATCH запрос к рецепту.
-        """
+        # PATCH запрос к рецепту
         RecipeIngredient.objects.filter(recipe=instance).delete()
         ingredients = validated_data.pop('ingredients')
         self.create_ingredients(ingredients, instance)
