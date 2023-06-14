@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
@@ -7,12 +8,13 @@ from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
 from djoser.views import UserViewSet
 
 from recipes.models import Tag, Recipe, Ingredient
-from users.models import CustomUser
+from users.models import CustomUser, Subscription
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
                           AuthorOrReadOnlyForRecipes)
 from .serializers import (UserSerializer, TagSerializer,
                           RecipeSerializer,
-                          IngredientSerializer, CreateRecipeSerializer)
+                          IngredientSerializer, CreateRecipeSerializer,
+                          SubscribeSerializer)
 
 
 # TODO Там, где надо, добавить поиск во вьюсеты
@@ -23,7 +25,6 @@ class CustomUserViewSet(UserViewSet):
     permission_classes = [IsAuthenticatedOrReadOnlyForProfile, ]
     serializer_class = UserSerializer
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'post']
 
     def get_object(self):
         # Для GET запроса по id пользователя
@@ -31,7 +32,7 @@ class CustomUserViewSet(UserViewSet):
                                  id=self.kwargs.get('id'))
 
     @action(
-        methods=('POST', 'DELETE',),
+        methods=['post', 'delete', ],
         detail=True,
         permission_classes=[IsAuthenticated])
     def subscribe(self, request, **kwargs):
@@ -41,10 +42,34 @@ class CustomUserViewSet(UserViewSet):
             CustomUser, id=self.kwargs.get('id'))
 
         if request.method == 'POST':
-            pass
+            serializer = SubscribeSerializer(
+                subscribe_user,
+                data=request.data,
+                context={"request": request}
+            )
+            serializer.is_valid(raise_exception=True)
+            Subscription.objects.create(user=user, author=subscribe_user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            pass
+            subscription = get_object_or_404(
+                Subscription,
+                user=user,
+                author=subscribe_user)
+            subscription.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False,
+            permission_classes=[IsAuthenticated])
+    def subscriptions(self, request):
+        """ Получение списка подписок пользователя. """
+        user = request.user
+        queryset = CustomUser.objects.filter(following__user=user)
+        pagination = self.paginate_queryset(queryset)
+        serializer = SubscribeSerializer(pagination,
+                                         many=True,
+                                         context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
 
 class TagViewSet(viewsets.ModelViewSet):

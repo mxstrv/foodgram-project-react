@@ -1,6 +1,8 @@
 from django.core.validators import RegexValidator
 from django.db.transaction import atomic
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
+from rest_framework.fields import SerializerMethodField
 
 from .fields import Base64ImageField
 from users.models import CustomUser, Subscription
@@ -20,7 +22,6 @@ class UserSerializer(serializers.ModelSerializer):
             RegexValidator(
                 regex=r'^[\w.@+-]+',
                 message='Неподходящий формат имени пользователя')])
-    # is_subscribed = serializers.BooleanField(default=False, required=False)
     is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -61,7 +62,63 @@ class SubscribeSerializer(serializers.ModelSerializer):
     """
     Сериализатор для работы с подписками/отписками.
     """
-    pass
+    recipes_count = SerializerMethodField()
+    recipes = SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count'
+        ]
+        read_only_fields = [
+            'email',
+            'username',
+            'first_name',
+            'last_name'
+        ]
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return Subscription.objects.filter(
+            user=request.user, author=obj
+        ).exists()
+
+    def validate(self, data):
+        author = self.instance
+        user = self.context.get('request').user
+        if Subscription.objects.filter(author=author, user=user).exists():
+            raise ValidationError(
+                detail='Вы уже подписаны!',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        if user == author:
+            raise ValidationError(
+                detail='Нельзя подписаться на себя!',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        return data
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        limit = request.GET.get('recipes_limit')
+        recipes = obj.recipes.all()
+        if limit:
+            recipes = recipes[:int(limit)]
+        serializer = RecipeSerializer(recipes, many=True, read_only=True)
+        return serializer.data
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
 
 
 class TagSerializer(serializers.ModelSerializer):
