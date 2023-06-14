@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 
 
 class CustomUser(AbstractUser):
-    """ Кастомная модель пользователя для работы с Foodgram."""
+    """ Кастомная модель пользователя Foodgram. """
     username = models.CharField(
         'Имя пользователя',
         max_length=150,
@@ -43,7 +43,28 @@ class CustomUser(AbstractUser):
 
 
 class Subscription(models.Model):
-    # TODO IMPLEMENT
-    # follower
-    # following
-    pass
+    """ Модель подписок на пользователей. """
+    user = models.ForeignKey(
+        CustomUser,
+        related_name='follower',
+        on_delete=models.CASCADE
+    )
+
+    author = models.ForeignKey(
+        CustomUser,
+        related_name='following',
+        on_delete=models.CASCADE
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='follower_following_unique'
+            )
+        ]
+        verbose_name = 'подписка'
+        verbose_name_plural = 'подписки'
+
+    def __str__(self):
+        return f'{self.user} подписан на {self.author}'
