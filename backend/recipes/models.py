@@ -78,7 +78,8 @@ class Recipe(models.Model):
         CustomUser,
         on_delete=models.SET_NULL,
         null=True,
-        verbose_name='Автор рецепта'
+        verbose_name='Автор рецепта',
+        related_name='recipes'
     )
     tags = models.ManyToManyField(
         Tag,
