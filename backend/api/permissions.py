@@ -16,13 +16,12 @@ class AdminUserOrReadOnly(permissions.BasePermission):
                 or request.method in permissions.SAFE_METHODS)
 
     def has_object_permission(self, request, view, obj):
-        return (
-                request.method in permissions.SAFE_METHODS
+        return (request.method in permissions.SAFE_METHODS
                 or request.user.is_authenticated
                 and request.user.is_active
                 and request.user == obj.author
                 or request.user.is_staff
-        )
+                )
 
 
 class AuthorOrReadOnlyForRecipes(permissions.BasePermission):
