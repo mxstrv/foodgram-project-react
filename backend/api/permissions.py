@@ -3,7 +3,8 @@ from rest_framework import permissions
 
 class IsAuthenticatedOrReadOnlyForProfile(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated or request.method in permissions.SAFE_METHODS
+        return (request.user.is_authenticated
+                or request.method in permissions.SAFE_METHODS)
 
     def has_object_permission(self, request, view, obj):
         return request.user.is_authenticated and request.user == obj.user
@@ -11,7 +12,8 @@ class IsAuthenticatedOrReadOnlyForProfile(permissions.BasePermission):
 
 class AdminUserOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated or request.method in permissions.SAFE_METHODS
+        return (request.user.is_authenticated
+                or request.method in permissions.SAFE_METHODS)
 
     def has_object_permission(self, request, view, obj):
         return (
@@ -25,7 +27,8 @@ class AdminUserOrReadOnly(permissions.BasePermission):
 
 class AuthorOrReadOnlyForRecipes(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.method in permissions.SAFE_METHODS or request.user.is_authenticated
+        return (request.method in permissions.SAFE_METHODS
+                or request.user.is_authenticated)
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:

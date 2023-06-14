@@ -3,7 +3,7 @@ from django.db.transaction import atomic
 from rest_framework import serializers
 
 from .fields import Base64ImageField
-from users.models import CustomUser
+from users.models import CustomUser, Subscription
 from recipes.models import Tag, Recipe, RecipeIngredient, Ingredient, RecipeTag
 
 
@@ -11,24 +11,28 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Сериализатор для работы с пользователем.
     """
-    # TODO Добавить подписку на других пользователей
     first_name = serializers.CharField(max_length=150, required=True)
     last_name = serializers.CharField(max_length=150, required=True)
     email = serializers.CharField(max_length=254, required=True)
-    username = serializers.CharField(max_length=150, required=True, validators=[
-        RegexValidator(
-            regex=r'^[\w.@+-]+',
-            message='Неподходящий формат имени пользователя')])
+    username = serializers.CharField(
+        max_length=150, required=True,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+',
+                message='Неподходящий формат имени пользователя')])
+    # is_subscribed = serializers.BooleanField(default=False, required=False)
+    is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = CustomUser
         fields = [
-            "email",
-            "id",
-            "username",
-            "first_name",
-            "last_name",
-            "password",
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+            'is_subscribed',
         ]
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -43,6 +47,21 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return Subscription.objects.filter(
+            user=request.user, author=obj
+        ).exists()
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для работы с подписками/отписками.
+    """
+    pass
 
 
 class TagSerializer(serializers.ModelSerializer):

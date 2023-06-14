@@ -1,12 +1,15 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
+                                        IsAuthenticated)
 from djoser.views import UserViewSet
 
 from recipes.models import Tag, Recipe, Ingredient
 from users.models import CustomUser
-from .permissions import IsAuthenticatedOrReadOnlyForProfile, AuthorOrReadOnlyForRecipes
+from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
+                          AuthorOrReadOnlyForRecipes)
 from .serializers import (UserSerializer, TagSerializer,
                           RecipeSerializer,
                           IngredientSerializer, CreateRecipeSerializer)
@@ -26,6 +29,22 @@ class CustomUserViewSet(UserViewSet):
         # Для GET запроса по id пользователя
         return get_object_or_404(CustomUser,
                                  id=self.kwargs.get('id'))
+
+    @action(
+        methods=('POST', 'DELETE',),
+        detail=True,
+        permission_classes=[IsAuthenticated])
+    def subscribe(self, request, **kwargs):
+        """ Подписка/отписка на пользователя. """
+        user = request.user
+        subscribe_user = get_object_or_404(
+            CustomUser, id=self.kwargs.get('id'))
+
+        if request.method == 'POST':
+            pass
+
+        if request.method == 'DELETE':
+            pass
 
 
 class TagViewSet(viewsets.ModelViewSet):
