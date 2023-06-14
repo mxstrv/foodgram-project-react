@@ -1,6 +1,5 @@
 from django.core.validators import RegexValidator, MinValueValidator
 from django.db import models
-from django.db.models import UniqueConstraint
 
 from users.models import CustomUser
 
@@ -51,7 +50,7 @@ class Ingredient(models.Model):
         ordering = ['name']
         verbose_name = 'Ингредиент'
         constraints = [
-            UniqueConstraint(
+            models.UniqueConstraint(
                 fields=['name', 'measurement_unit'],
                 name='ingredient_name_unit_unique'
             )
@@ -112,7 +111,7 @@ class RecipeIngredient(models.Model):
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         constraints = [
-            UniqueConstraint(
+            models.UniqueConstraint(
                 fields=['recipe', 'ingredient'],
                 name='recipe_ingredient_unique'
             )
@@ -135,7 +134,7 @@ class RecipeTag(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
+            models.UniqueConstraint(
                 fields=['recipe', 'tag'],
                 name='recipe_tag_unique'
             )
