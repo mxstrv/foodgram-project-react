@@ -6,7 +6,8 @@ from rest_framework.fields import SerializerMethodField
 
 from .fields import Base64ImageField
 from users.models import CustomUser, Subscription
-from recipes.models import Tag, Recipe, RecipeIngredient, Ingredient, RecipeTag
+from recipes.models import (Tag, Recipe, RecipeIngredient,
+                            Ingredient, RecipeTag, Favorite)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -171,6 +172,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     image = Base64ImageField(required=True, allow_null=False)
     ingredients = serializers.SerializerMethodField()
+    is_favorited = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Recipe
@@ -179,6 +181,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'author',
             'tags',
             'ingredients',
+            'is_favorited',
             'name',
             'text',
             'image',
@@ -188,6 +191,14 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_ingredients(self, obj):
         ingredients = RecipeIngredient.objects.filter(recipe=obj)
         return RecipeIngredientSerializer(ingredients, many=True).data
+
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return Favorite.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
 
 
 class AddIngredientRecipeSerializer(serializers.ModelSerializer):
@@ -288,3 +299,42 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context={
             'request': self.context.get('request')
         }).data
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор, обрабатывающий добавление рецепта в избранное.
+    """
+    is_favorited = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Recipe
+        fields = [
+            'id',
+            'name',
+            'image',
+            'cooking_time',
+            'is_favorited'
+        ]
+
+        read_only_fields = [
+            'image',
+        ]
+
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return Favorite.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
+
+    def validate(self, data):
+        recipe = self.instance
+        user = self.context.get('request').user
+        if Favorite.objects.filter(recipe=recipe, user=user).exists():
+            raise ValidationError(
+                detail='Рецепт уже в избранном!',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        return data

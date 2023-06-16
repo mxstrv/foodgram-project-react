@@ -7,14 +7,14 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 
-from recipes.models import Tag, Recipe, Ingredient
+from recipes.models import Tag, Recipe, Ingredient, Favorite
 from users.models import CustomUser, Subscription
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
                           AuthorOrReadOnlyForRecipes)
 from .serializers import (UserSerializer, TagSerializer,
                           RecipeSerializer,
                           IngredientSerializer, CreateRecipeSerializer,
-                          SubscribeSerializer)
+                          SubscribeSerializer, FavoriteSerializer)
 
 
 # TODO Там, где надо, добавить поиск во вьюсеты
@@ -45,7 +45,7 @@ class CustomUserViewSet(UserViewSet):
             serializer = SubscribeSerializer(
                 subscribe_user,
                 data=request.data,
-                context={"request": request}
+                context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
             Subscription.objects.create(user=user, author=subscribe_user)
@@ -101,3 +101,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return RecipeSerializer
         return CreateRecipeSerializer
+
+    @action(
+        methods=['post', 'delete'],
+        detail=True,
+        permission_classes=[IsAuthenticated], )
+    def favorite(self, request, **kwargs):
+        """ Добавление/удаление рецепта в избранное. """
+        user = request.user
+        favorite_recipe = get_object_or_404(Recipe,
+                                            pk=self.kwargs.get('pk'))
+
+        if request.method == 'POST':
+            serializer = FavoriteSerializer(
+                favorite_recipe,
+                data=request.data,
+                context={'request': request},
+            )
+            serializer.is_valid(raise_exception=True)
+            Favorite.objects.create(
+                user=user, recipe=favorite_recipe)
+            # Убирает из респонса is_favorited bool
+            modified_serializer_data = serializer.data
+            modified_serializer_data.pop('is_favorited')
+            return Response(
+                modified_serializer_data,
+                status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            recipe = get_object_or_404(
+                Favorite,
+                user=user,
+                recipe=favorite_recipe)
+            recipe.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)

@@ -140,3 +140,31 @@ class RecipeTag(models.Model):
                 name='recipe_tag_unique'
             )
         ]
+
+
+class Favorite(models.Model):
+    """ Модель избранных рецептов пользователя. """
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь')
+
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Избранный рецепт',
+        related_name='favorite_recipes'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='user_favouring_unique'
+            )
+        ]
+        verbose_name = 'избранное'
+        verbose_name_plural = 'избранные'
+
+    def __str__(self):
+        return f'{self.user} добавил {self.recipe} в избранное.'
