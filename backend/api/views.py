@@ -3,12 +3,12 @@ from djoser.views import UserViewSet
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 
 from recipes.models import Tag, Recipe, Ingredient, Favorite
 from users.models import CustomUser, Subscription
+from .paginations import PageNumberLimitPagination
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
                           AuthorOrReadOnlyForRecipes)
 from .serializers import (UserSerializer, TagSerializer,
@@ -24,7 +24,7 @@ class CustomUserViewSet(UserViewSet):
     queryset = CustomUser.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnlyForProfile, ]
     serializer_class = UserSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = PageNumberLimitPagination
 
     def get_object(self):
         # Для GET запроса по id пользователя
@@ -78,6 +78,7 @@ class TagViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly, ]
     http_method_names = ['get']
     serializer_class = TagSerializer
+    # Необязательный параметр, но лучше указать явно
     pagination_class = None
 
 
@@ -94,7 +95,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """ ViewSet для рецептов."""
     queryset = Recipe.objects.all()
     permission_classes = [AuthorOrReadOnlyForRecipes, ]
-    pagination_class = PageNumberPagination
+    pagination_class = PageNumberLimitPagination
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
