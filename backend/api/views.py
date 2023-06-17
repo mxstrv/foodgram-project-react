@@ -1,5 +1,5 @@
 from django.db.models import Sum
-from django.http import HttpResponse, FileResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from fpdf import FPDF
@@ -9,7 +9,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 
-from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, RecipeIngredient
+from recipes.models import (Tag, Recipe, Ingredient, Favorite,
+                            ShoppingCart, RecipeIngredient)
 from users.models import CustomUser, Subscription
 from .paginations import PageNumberLimitPagination
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
@@ -184,7 +185,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                  ).annotate(amount=Sum('amount'))
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.add_page()
-        pdf.add_font('DejaVu', '', 'static/fonts/DejaVuSansCondensed.ttf', uni=True)
+        pdf.add_font(
+            'DejaVu', '',
+            'static/fonts/DejaVuSansCondensed.ttf',
+            uni=True
+        )
         pdf.set_font('DejaVu', '', 16)
         pdf.cell(200, 10, txt='Ваш список покупок:', ln=1, align="C")
         for ingredient in ingredients_list:
@@ -199,6 +204,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = HttpResponse(
             result,
             content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
+        response[
+            'Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
 
         return response
