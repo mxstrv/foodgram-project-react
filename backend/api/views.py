@@ -1,12 +1,15 @@
+from django.db.models import Sum
+from django.http import HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
+from fpdf import FPDF
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 
-from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart
+from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, RecipeIngredient
 from users.models import CustomUser, Subscription
 from .paginations import PageNumberLimitPagination
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
@@ -168,3 +171,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 recipe=shopping_recipe)
             recipe.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        methods=['get'],
+        detail=False,
+        permission_classes=[IsAuthenticated]
+    )
+    def download_shopping_cart(self, request):
+        ingredients_list = RecipeIngredient.objects.filter(
+            recipe__shopping_cart__user=request.user
+        ).values('ingredient__name', 'ingredient__measurement_unit'
+                 ).annotate(amount=Sum('amount'))
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf.add_page()
+        pdf.add_font('DejaVu', '', 'static/fonts/DejaVuSansCondensed.ttf', uni=True)
+        pdf.set_font('DejaVu', '', 16)
+        pdf.cell(200, 10, txt='Ваш список покупок:', ln=1, align="C")
+        for ingredient in ingredients_list:
+            pdf.cell(w=0, h=10, ln=1,
+                     txt=(f'{ingredient["ingredient__name"]}'
+                          f' - {str(ingredient["amount"])}'
+                          f' {ingredient["ingredient__measurement_unit"]}'),
+                     align='L')
+
+        result = pdf.output(dest='S').encode('latin-1')
+
+        response = HttpResponse(
+            result,
+            content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
+
+        return response
