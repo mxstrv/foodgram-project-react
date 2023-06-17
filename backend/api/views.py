@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 
-from recipes.models import Tag, Recipe, Ingredient, Favorite
+from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart
 from users.models import CustomUser, Subscription
 from .paginations import PageNumberLimitPagination
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
@@ -14,7 +14,8 @@ from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
 from .serializers import (UserSerializer, TagSerializer,
                           RecipeSerializer,
                           IngredientSerializer, CreateRecipeSerializer,
-                          SubscribeSerializer, FavoriteSerializer)
+                          SubscribeSerializer, FavoriteSerializer,
+                          ShoppingCartSerializer)
 
 
 # TODO Там, где надо, добавить поиск во вьюсеты
@@ -134,5 +135,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 Favorite,
                 user=user,
                 recipe=favorite_recipe)
+            recipe.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        methods=['post', 'delete'],
+        detail=True,
+        permission_classes=[IsAuthenticated]
+    )
+    def shopping_cart(self, request, **kwargs):
+        user = request.user
+        shopping_recipe = get_object_or_404(Recipe,
+                                            pk=self.kwargs.get('pk'))
+
+        if request.method == 'POST':
+            serializer = ShoppingCartSerializer(
+                shopping_recipe,
+                data=request.data,
+                context={'request': request},
+            )
+            serializer.is_valid(raise_exception=True)
+            ShoppingCart.objects.create(
+                user=user, recipe=shopping_recipe)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            recipe = get_object_or_404(
+                ShoppingCart,
+                user=user,
+                recipe=shopping_recipe)
             recipe.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)

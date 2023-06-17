@@ -7,7 +7,7 @@ from rest_framework.fields import SerializerMethodField
 from .fields import Base64ImageField
 from users.models import CustomUser, Subscription
 from recipes.models import (Tag, Recipe, RecipeIngredient,
-                            Ingredient, RecipeTag, Favorite)
+                            Ingredient, RecipeTag, Favorite, ShoppingCart)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -99,7 +99,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         if Subscription.objects.filter(author=author, user=user).exists():
             raise ValidationError(
-                detail='Вы уже подписаны!',
+                detail='Вы уже подписаны на этого пользователя!',
                 code=status.HTTP_400_BAD_REQUEST
             )
         if user == author:
@@ -173,6 +173,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField(required=True, allow_null=False)
     ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField(read_only=True)
+    is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Recipe
@@ -182,6 +183,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags',
             'ingredients',
             'is_favorited',
+            'is_in_shopping_cart',
             'name',
             'text',
             'image',
@@ -197,6 +199,14 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not request or request.user.is_anonymous:
             return False
         return Favorite.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
+
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return ShoppingCart.objects.filter(
             user=request.user, recipe=obj
         ).exists()
 
@@ -305,7 +315,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
     """
     Сериализатор, обрабатывающий добавление рецепта в избранное.
     """
-    is_favorited = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Recipe
@@ -314,20 +323,11 @@ class FavoriteSerializer(serializers.ModelSerializer):
             'name',
             'image',
             'cooking_time',
-            'is_favorited'
         ]
 
         read_only_fields = [
             'image',
         ]
-
-    def get_is_favorited(self, obj):
-        request = self.context.get('request')
-        if not request or request.user.is_anonymous:
-            return False
-        return Favorite.objects.filter(
-            user=request.user, recipe=obj
-        ).exists()
 
     def validate(self, data):
         recipe = self.instance
@@ -335,6 +335,35 @@ class FavoriteSerializer(serializers.ModelSerializer):
         if Favorite.objects.filter(recipe=recipe, user=user).exists():
             raise ValidationError(
                 detail='Рецепт уже в избранном!',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        return data
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор, обрабатывающий добавление рецепта в корзину для покупок.
+    """
+
+    class Meta:
+        model = Recipe
+        fields = [
+            'id',
+            'name',
+            'image',
+            'cooking_time',
+        ]
+
+        read_only_fields = [
+            'image',
+        ]
+
+    def validate(self, data):
+        recipe = self.instance
+        user = self.context.get('request').user
+        if ShoppingCart.objects.filter(recipe=recipe, user=user).exists():
+            raise ValidationError(
+                detail='Рецепт уже в списке для покупок!',
                 code=status.HTTP_400_BAD_REQUEST
             )
         return data
