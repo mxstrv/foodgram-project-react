@@ -63,7 +63,7 @@ class Recipe(models.Model):
                             max_length=200,
                             blank=False, )
     text = models.CharField('Описание блюда',
-                            max_length=10000,  # TODO CHECK SIZE
+                            max_length=10000,
                             blank=False)
     cooking_time = models.IntegerField('Время приготовления блюда',
                                        blank=False,
