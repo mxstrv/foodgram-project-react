@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from fpdf import FPDF
 from rest_framework import viewsets, status
@@ -12,7 +13,7 @@ from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
 from recipes.models import (Tag, Recipe, Ingredient, Favorite,
                             ShoppingCart, RecipeIngredient)
 from users.models import CustomUser, Subscription
-from .filters import IngredientSearch
+from .filters import IngredientSearch, RecipeFilter
 from .paginations import PageNumberLimitPagination
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
                           AuthorOrReadOnlyForRecipes)
@@ -23,15 +24,12 @@ from .serializers import (UserSerializer, TagSerializer,
                           ShoppingCartSerializer)
 
 
-# TODO Там, где надо, добавить поиск во вьюсеты
-
 class CustomUserViewSet(UserViewSet):
     """ ViewSet для пользователя."""
     queryset = CustomUser.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnlyForProfile, ]
     serializer_class = UserSerializer
     pagination_class = PageNumberLimitPagination
-    # TODO ADD RECIPES LIMIT
 
     def get_object(self):
         # Для GET запроса по id пользователя
@@ -97,7 +95,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     serializer_class = IngredientSerializer
     pagination_class = None
     filter_backends = (IngredientSearch,)
-    search_fields = ('name',)
+    search_fields = ('^name',)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -105,7 +103,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = [AuthorOrReadOnlyForRecipes, ]
     pagination_class = PageNumberLimitPagination
-    # TODO ADD FILTERS
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
@@ -132,11 +131,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             Favorite.objects.create(
                 user=user, recipe=favorite_recipe)
-            # Убирает из респонса is_favorited bool
-            modified_serializer_data = serializer.data
-            modified_serializer_data.pop('is_favorited')
             return Response(
-                modified_serializer_data,
+                serializer.data,
                 status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
