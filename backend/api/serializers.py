@@ -133,6 +133,10 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для ингредиентов.
+    """
+
     class Meta:
         model = Ingredient
         fields = [
