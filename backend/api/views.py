@@ -12,6 +12,7 @@ from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
 from recipes.models import (Tag, Recipe, Ingredient, Favorite,
                             ShoppingCart, RecipeIngredient)
 from users.models import CustomUser, Subscription
+from .filters import IngredientSearch
 from .paginations import PageNumberLimitPagination
 from .permissions import (IsAuthenticatedOrReadOnlyForProfile,
                           AuthorOrReadOnlyForRecipes)
@@ -30,6 +31,7 @@ class CustomUserViewSet(UserViewSet):
     permission_classes = [IsAuthenticatedOrReadOnlyForProfile, ]
     serializer_class = UserSerializer
     pagination_class = PageNumberLimitPagination
+    # TODO ADD RECIPES LIMIT
 
     def get_object(self):
         # Для GET запроса по id пользователя
@@ -94,6 +96,8 @@ class IngredientViewSet(viewsets.ModelViewSet):
     http_method_names = ['get']
     serializer_class = IngredientSerializer
     pagination_class = None
+    filter_backends = (IngredientSearch,)
+    search_fields = ('name',)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -101,6 +105,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = [AuthorOrReadOnlyForRecipes, ]
     pagination_class = PageNumberLimitPagination
+    # TODO ADD FILTERS
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
