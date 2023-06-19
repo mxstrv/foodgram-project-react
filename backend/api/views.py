@@ -3,13 +3,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from fpdf import FPDF
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 
+from core.pdf_generation import generate_pdf
 from recipes.models import (Tag, Recipe, Ingredient, Favorite,
                             ShoppingCart, RecipeIngredient)
 from users.models import CustomUser, Subscription
@@ -180,28 +180,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
+        """ Метод для скачивания pdf-файла с ингредиентами. """
         ingredients_list = RecipeIngredient.objects.filter(
             recipe__shopping_cart__user=request.user
         ).values('ingredient__name', 'ingredient__measurement_unit'
                  ).annotate(amount=Sum('amount'))
-        pdf = FPDF(orientation='P', unit='mm', format='A4')
-        pdf.add_page()
-        pdf.add_font(
-            'DejaVu', '',
-            'static/fonts/DejaVuSansCondensed.ttf',
-            uni=True
-        )
-        pdf.set_font('DejaVu', '', 16)
-        pdf.cell(200, 10, txt='Ваш список покупок:', ln=1, align="C")
-        for ingredient in ingredients_list:
-            pdf.cell(w=0, h=10, ln=1,
-                     txt=(f'{ingredient["ingredient__name"]}'
-                          f' - {str(ingredient["amount"])}'
-                          f' {ingredient["ingredient__measurement_unit"]}'),
-                     align='L')
-
-        result = pdf.output(dest='S').encode('latin-1')
-
+        result = generate_pdf(ingredients_list)
         response = HttpResponse(
             result,
             content_type='application/pdf')
