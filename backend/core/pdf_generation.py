@@ -20,7 +20,9 @@ class MyPDF(FPDF):
     def footer(self):
         self.set_y(-15)
         self.set_font("DejaVu", "", 12)
-        self.cell(0, 10, f"Страница {self.page_no()} из {self.alias_nb_pages()}", align="C")
+        self.cell(0, 10,
+                  f"Страница {self.page_no()} из {self.alias_nb_pages()}",
+                  align="C")
         self.cell(0, 10, 'Foodgram', align="R")
 
 
