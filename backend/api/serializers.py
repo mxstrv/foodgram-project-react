@@ -331,6 +331,8 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
         read_only_fields = [
             'image',
+            'name',
+            'cooking_time'
         ]
 
     def validate(self, data):
@@ -360,6 +362,8 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
         read_only_fields = [
             'image',
+            'name',
+            'cooking_time'
         ]
 
     def validate(self, data):
