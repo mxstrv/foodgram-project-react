@@ -22,6 +22,7 @@ from .serializers import (UserSerializer, TagSerializer,
                           IngredientSerializer, CreateRecipeSerializer,
                           SubscribeSerializer, FavoriteSerializer,
                           ShoppingCartSerializer)
+from .utils import instance_create_connection, instance_delete_connection
 
 
 class CustomUserViewSet(UserViewSet):
@@ -32,7 +33,7 @@ class CustomUserViewSet(UserViewSet):
     pagination_class = PageNumberLimitPagination
 
     def get_object(self):
-        # Для GET запроса по id пользователя
+        """ Для GET запроса по id пользователя."""
         return get_object_or_404(CustomUser,
                                  id=self.kwargs.get('id'))
 
@@ -55,14 +56,12 @@ class CustomUserViewSet(UserViewSet):
             serializer.is_valid(raise_exception=True)
             Subscription.objects.create(user=user, author=subscribe_user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            subscription = get_object_or_404(
-                Subscription,
-                user=user,
-                author=subscribe_user)
-            subscription.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        subscription = get_object_or_404(
+            Subscription,
+            user=user,
+            author=subscribe_user)
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False,
             permission_classes=[IsAuthenticated])
@@ -83,7 +82,6 @@ class TagViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly, ]
     http_method_names = ['get']
     serializer_class = TagSerializer
-    # Необязательный параметр, но лучше указать явно
     pagination_class = None
 
 
@@ -117,31 +115,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         permission_classes=[IsAuthenticated], )
     def favorite(self, request, **kwargs):
-        """ Добавление/удаление рецепта в избранное. """
-        user = request.user
+        """ Добавление/удаление рецепта в избранное."""
         favorite_recipe = get_object_or_404(Recipe,
                                             pk=self.kwargs.get('pk'))
 
         if request.method == 'POST':
-            serializer = FavoriteSerializer(
-                favorite_recipe,
-                data=request.data,
-                context={'request': request},
-            )
-            serializer.is_valid(raise_exception=True)
-            Favorite.objects.create(
-                user=user, recipe=favorite_recipe)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            recipe = get_object_or_404(
-                Favorite,
-                user=user,
-                recipe=favorite_recipe)
-            recipe.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return instance_create_connection(request,
+                                              favorite_recipe,
+                                              FavoriteSerializer)
+        return instance_delete_connection(
+            request, Favorite, favorite_recipe)
 
     @action(
         methods=['post', 'delete'],
@@ -149,30 +132,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, **kwargs):
-        user = request.user
+        """ Добавление рецепта в список для покупок."""
         shopping_recipe = get_object_or_404(Recipe,
                                             pk=self.kwargs.get('pk'))
 
         if request.method == 'POST':
-            serializer = ShoppingCartSerializer(
-                shopping_recipe,
-                data=request.data,
-                context={'request': request},
-            )
-            serializer.is_valid(raise_exception=True)
-            ShoppingCart.objects.create(
-                user=user, recipe=shopping_recipe)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            recipe = get_object_or_404(
-                ShoppingCart,
-                user=user,
-                recipe=shopping_recipe)
-            recipe.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return instance_create_connection(request,
+                                              shopping_recipe,
+                                              ShoppingCartSerializer)
+        return instance_delete_connection(
+            request, ShoppingCart, shopping_recipe)
 
     @action(
         methods=['get'],
@@ -180,11 +149,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        """ Метод для скачивания pdf-файла с ингредиентами. """
+        """ Метод для скачивания pdf-файла с ингредиентами."""
         ingredients_list = RecipeIngredient.objects.filter(
             recipe__shopping_cart__user=request.user
         ).values('ingredient__name', 'ingredient__measurement_unit'
-                 ).annotate(amount=Sum('amount'))
+                 ).annotate(total_amount=Sum('amount'))
         result = generate_pdf(ingredients_list)
         response = HttpResponse(
             result,

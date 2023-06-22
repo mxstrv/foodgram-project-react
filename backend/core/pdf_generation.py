@@ -1,10 +1,10 @@
 from fpdf import FPDF
 
 
-class MyPDF(FPDF):
+class ShoppingListPDF(FPDF):
     """
     Кастомная реализация класса FPDF.
-    Прописан footer, показывающий номер и количество страниц,
+    Прописан header и footer, показывающий номер и количество страниц,
     а так же название проекта, откуда был скачан pdf-файл.
     """
 
@@ -36,7 +36,7 @@ def generate_pdf(queryset):
     :param queryset:
     :return: string
     """
-    pdf = MyPDF(orientation='P', unit='mm', format='A4')
+    pdf = ShoppingListPDF(orientation='P', unit='mm', format='A4')
     pdf.add_page()
     pdf.add_font(
         'DejaVu', '',
@@ -47,7 +47,7 @@ def generate_pdf(queryset):
     for ingredient in queryset:
         pdf.cell(w=0, h=10, ln=1,
                  txt=(f'{ingredient["ingredient__name"]}'
-                      f' - {str(ingredient["amount"])}'
+                      f' - {str(ingredient["total_amount"])}'
                       f' {ingredient["ingredient__measurement_unit"]}'),
                  align='L')
 

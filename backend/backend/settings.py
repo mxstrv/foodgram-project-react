@@ -4,7 +4,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-)tq84&m4-k51=te#cn-l(97pw7pmw&s&)@izrbqmkqupvt_4_)'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = False if os.getenv('DJANGO_DEBUG_STATE', 'false').lower() == 'false' else True
 
@@ -61,9 +61,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-
 # Password validation
-# https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -81,7 +79,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/3.2/topics/i18n/
 
 LANGUAGE_CODE = 'ru-ru'
 
@@ -96,12 +93,10 @@ USE_TZ = True
 STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # КАСТОМНЫЕ НАСТРОЙКИ
-# ------------------------------------------------------------------------
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -132,7 +127,7 @@ DJOSER = {
     },
 }
 
-# POSTGRESQL ENABLED
+# POSTGRESQL
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
