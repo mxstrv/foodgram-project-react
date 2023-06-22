@@ -135,4 +135,3 @@ dmypy.json
 # custom
 .DS_Store
 /media
-**/migrations/
