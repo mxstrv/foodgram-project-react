@@ -1,6 +1,5 @@
 from django.core.validators import RegexValidator
 from django.db.transaction import atomic
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import SerializerMethodField
@@ -251,30 +250,25 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        ingredients = self.data.get('ingredients')
         ingredient_list = []
-        for ingredient in ingredients:
-            amount = ingredient['amount']
-            if int(amount) < 1:
+        for ingredient in data.get('ingredients'):
+            if ingredient.get('amount') < 1:
                 raise serializers.ValidationError({
                     'amount': 'Ингредиентов должно быть больше одного!'
                 })
-            if ingredient['id'] in ingredient_list:
+            if ingredient.get('id') in ingredient_list:
                 raise serializers.ValidationError({
                     'ingredient': 'Ингредиенты не могут повторяться!'
                 })
-            ingredient_list.append(ingredient['id'])
+            ingredient_list.append(ingredient.get('id'))
         return data
 
     def create_ingredients(self, ingredients, recipe):
         ingredient_list = []
         for ingredient in ingredients:
-            current_ingredient = get_object_or_404(Ingredient,
-                                                   id=ingredient.get('id'))
-            ingredient_amount = ingredient.get('amount')
             ingredient_list.append(RecipeIngredient(
-                recipe=recipe, ingredient=current_ingredient,
-                amount=ingredient_amount))
+                recipe=recipe, ingredient=ingredient,
+                amount=ingredient.get('amount')))
         RecipeIngredient.objects.bulk_create(ingredient_list)
 
     def create_tags(self, tags, recipe):
@@ -302,7 +296,6 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         self.create_tags(tags, instance)
         super().update(instance, validated_data)
-        instance.save()
         return instance
 
     def to_representation(self, instance):
