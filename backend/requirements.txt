@@ -17,7 +17,7 @@ fpdf==1.7.2
 idna==3.4
 mccabe==0.7.0
 oauthlib==3.2.2
-Pillow==9.5.0
+Pillow==10.0.1
 pycodestyle==2.10.0
 pycparser==2.21
 pyflakes==3.0.1
